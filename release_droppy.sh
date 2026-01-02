@@ -30,14 +30,10 @@ if [ ! -d "$TAP_REPO" ]; then
 fi
 
 # 1. Update Workspace Version
-echo "\n-> Use agvtool to update version to $VERSION..."
+# Update version using sed directly on project file (agvtool is unreliable with generated Info.plist)
+echo "\n-> Updating version to $VERSION in project file..."
 cd "$MAIN_REPO" || exit
-if [ -d "Droppy.xcodeproj" ]; then
-    xcrun agvtool new-marketing-version "$VERSION" > /dev/null
-else
-    echo "❌ Error: No Xcode project found in $MAIN_REPO"
-    exit 1
-fi
+sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = $VERSION;/" Droppy.xcodeproj/project.pbxproj
 
 # 2. Build Release Configuration
 echo "-> Building App (Release)..."
