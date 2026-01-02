@@ -121,7 +121,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading) {
                     Text("Droppy")
                         .font(.headline)
-                    Text("Version 1.0.0")
+                    Text("Version \(UpdateChecker.shared.currentVersion)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -129,6 +129,15 @@ struct SettingsView: View {
             .padding(.vertical, 8)
             
             LabeledContent("Developer", value: "Jordy Spruit")
+            
+            Button {
+                UpdateChecker.shared.checkAndNotify()
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Text("Check for Updates")
+                }
+            }
         } header: {
             Text("About")
         }

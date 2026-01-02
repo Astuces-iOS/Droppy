@@ -146,13 +146,25 @@ class UpdateChecker: ObservableObject {
         }
     }
     
-    /// Check for updates in background and show alert if available
+    /// Check for updates and always show feedback to user
     func checkAndNotify() {
         Task {
             await checkForUpdates()
             if updateAvailable {
                 showUpdateAlert()
+            } else {
+                showUpToDateAlert()
             }
         }
+    }
+    
+    /// Show alert that app is up to date
+    func showUpToDateAlert() {
+        let alert = NSAlert()
+        alert.messageText = "Droppy is up to date!"
+        alert.informativeText = "You're running the latest version (\(currentVersion))."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }
