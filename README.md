@@ -38,7 +38,17 @@ brew install --cask iordv/tap/droppy
 3. Right-click → Open (required for unsigned apps)
 
 <!-- CHANGELOG_START -->
-- **Fix**: Resolved persistent crash in NotchWindow.updateMouseEventHandling() by adding validity checks to prevent accessing deallocated window during timer callbacks.
+# Features
+- **Simplified Compression**: Removed complex settings. "Auto (Medium)" is now the default.
+- **Photos Target Size**: Right-click images to specify exact MB size.
+- **Smart Size Guard**: Automatically cancels compression if the file doesn't get smaller.
+- **Visual Feedback**: "Shake & Shield" animation confirms optimal compression.
+- **Better Video**: Now uses HEVC 1080p for high-definition, small-size results.
+- **External Displays**: Option to hide the Notch on external monitors.
+
+# Improvements
+- Fixed PDF page orientation issues.
+- Fixed Video compression size increase issues.
 <!-- CHANGELOG_END -->
 
 ## Features
