@@ -289,7 +289,15 @@ class FileCompressor {
             let renderHeight = visualHeight * dpiScale
             
             // Render page to image using PDFPage's thumbnail method (handles rotation correctly)
-            let pageImage = page.thumbnail(of: CGSize(width: renderWidth, height: renderHeight), for: .cropBox)
+            let pageImageRaw = page.thumbnail(of: CGSize(width: renderWidth, height: renderHeight), for: .cropBox)
+            
+            // Create a white background image to handle transparency (prevents black pages in JPEG)
+            let pageImage = NSImage(size: pageImageRaw.size)
+            pageImage.lockFocus()
+            NSColor.white.set()
+            NSBezierPath(rect: CGRect(origin: .zero, size: pageImage.size)).fill()
+            pageImageRaw.draw(at: .zero, from: .zero, operation: .sourceOver, fraction: 1.0)
+            pageImage.unlockFocus()
             
             // Convert to JPEG data
             guard let tiffData = pageImage.tiffRepresentation,
