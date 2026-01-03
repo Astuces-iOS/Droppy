@@ -118,7 +118,8 @@ brew install --cask iordv/tap/droppy
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
 # Fixes
-- **Critical Crash Fix**: Resolved an occasional crash during drag detection (Pasteboard access).
+- **Intel Mac Support**: Fixed an issue where the app would not run on Intel-based Macs. Droppy is now a fully persistent Universal Binary.
+- **Universal Build**: Verified support for macOS 14+ on both Apple Silicon and Intel.
 <!-- CHANGELOG_END -->
 
 ---
