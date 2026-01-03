@@ -37,11 +37,12 @@ brew install iordv/tap/droppy
 2. Drag `Droppy.app` to your Applications folder
 3. Right-click → Open (required for unsigned apps)
 
+<!-- CHANGELOG_START -->
 ## New in v2.0 🚀
 
 ### 🧺 The Floating Basket
 Welcome to the family! Sometimes the notch is too far away. The **Floating Basket** brings the shelf to you.
-- **Jiggle to Reveal (Beta)**: Just give your mouse a little jiggle while dragging files, and the basket pops up right where you are. (Enable this in *Settings > Beta Features*)
+- **Jiggle to Reveal**: Just give your mouse a little jiggle while dragging files, and the basket pops up right where you are.
 - **Drag & Drop**: Drop files in to hold them, drag them out when you're ready.
 - **Push to Shelf**: Want to keep files for later? One click sends items from your temporary basket to the main notch shelf.
 
@@ -55,6 +56,7 @@ Droppy is no longer just a shelf. It's a Swiss Army knife for your files:
 ### 🎨 Refined Experience
 - **Smoother Animations**: Every interaction has been polished.
 - **macOS Sonoma Ready**: Now fully compatible with macOS 14 (Sonoma) and later.
+<!-- CHANGELOG_END -->
 
 ## Features
 

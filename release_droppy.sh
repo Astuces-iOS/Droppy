@@ -7,17 +7,55 @@ DMG_NAME="Droppy.dmg"
 
 # Check arguments
 if [ -z "$1" ]; then
-    echo "Usage: ./release_droppy.sh [VERSION_NUMBER]"
-    echo "Example: ./release_droppy.sh 1.2"
+    echo "Usage: ./release_droppy.sh [VERSION_NUMBER] [PATH_TO_RELEASE_NOTES]"
+    echo "Example: ./release_droppy.sh 1.2 ./notes.txt"
     exit 1
 fi
 
 VERSION="$1"
+NOTES_FILE="$2"
 
 # Banner
 echo "========================================"
 echo "🚀 Preparing Droppy Release v$VERSION"
 echo "========================================"
+
+# Update Changelogs if notes provided
+if [ -n "$NOTES_FILE" ] && [ -f "$NOTES_FILE" ]; then
+    echo "\n-> Updating Changelogs with notes from $NOTES_FILE..."
+    
+    # Read notes content
+    NOTES_CONTENT=$(cat "$NOTES_FILE")
+    
+    # Escape special characters for sed usage
+    # We replace newlines with literal '\n' for specific formats if needed, 
+    # but for simple replacement we might do differently. 
+    # Since multiline sed is tricky, we'll use perl which handles this better on macOS.
+    
+    # 1. Update SettingsView.swift
+    echo "   - Updating SettingsView.swift..."
+    # We look for `static let current = """` ... `"""` block
+    # Note: We need to escape quote marks in the content string for Swift
+    SWIFT_CONTENT=$(echo "$NOTES_CONTENT" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+    
+    cd "$MAIN_REPO" || exit
+    perl -0777 -i -pe "s/static let current = \"\"\"(.*?)\"\"\"/static let current = \"\"\"\n$SWIFT_CONTENT\n\"\"\"/s" Droppy/SettingsView.swift
+
+    # 2. Update README.md
+    echo "   - Updating README.md..."
+    # We look for <!-- CHANGELOG_START --> ... <!-- CHANGELOG_END -->
+    # For README, we want raw markdown, so we use NOTES_CONTENT directly but need to escape for Perl regex replacement string if it has special vars
+    # A safer way with Perl is passing content as env var
+    export NEW_NOTES="$NOTES_CONTENT"
+    perl -0777 -i -pe 's/(<!-- CHANGELOG_START -->)(.*?)(<!-- CHANGELOG_END -->)/$1\n$ENV{NEW_NOTES}\n$3/s' README.md
+
+else
+    if [ -n "$NOTES_FILE" ]; then
+        echo "⚠️ Warning: Notes file '$NOTES_FILE' not found. Skipping changelog updates."
+    else
+        echo "ℹ️ No release notes file provided. Skipping changelog updates."
+    fi
+fi
 
 # Check Repos
 if [ ! -d "$MAIN_REPO" ]; then
