@@ -38,11 +38,10 @@ brew install --cask iordv/tap/droppy
 3. Right-click → Open (required for unsigned apps)
 
 <!-- CHANGELOG_START -->
-Feature: Added toggles to enable/disable Notch Shelf and Floating Basket in settings.
-Fixed: Critical 'objc_release' crash by hardening window animation handling.
-Internal: Stability improvements through centralized event monitor management.
-UI: Cleaned up settings layout by removing redundant dividers.
-🛠️ Hardened release process for 100% reliable updates.
+Fixed: Critical 'objc_release' crash in DragMonitor by refactoring pasteboard access.
+Performance: Optimized jiggle detection polling for better CPU efficiency.
+Automation: Fully automated GitHub Releases with binary consistency.
+🛡️ Stability and memory management hardened for production.
 <!-- CHANGELOG_END -->
 
 ## Features
