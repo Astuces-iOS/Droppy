@@ -112,7 +112,9 @@ final class NotchWindowController: NSObject, ObservableObject {
                 timer.invalidate()
                 return
             }
-            window.updateMouseEventHandling()
+            autoreleasepool {
+                window.updateMouseEventHandling()
+            }
         }
         
         // Global monitor catches mouse movement when Droppy is not frontmost
