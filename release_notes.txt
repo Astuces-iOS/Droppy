@@ -1,4 +1,11 @@
-Stability (v2.1.4): Hardened window animations to eliminate rare `objc_release` crashes.
-Fixed: Refactored animation logic to bypass unstable background DisplayLink threads.
-Unified: All window transitions now use main-thread safe synchronization.
-Maintenance: Continuous improvement for the rock-solid Droppy experience.
+# Features
+- **Simplified Compression**: Removed complex settings. "Auto (Medium)" is now the default.
+- **Photos Target Size**: Right-click images to specify exact MB size.
+- **Smart Size Guard**: Automatically cancels compression if the file doesn't get smaller.
+- **Visual Feedback**: "Shake & Shield" animation confirms optimal compression.
+- **Better Video**: Now uses HEVC 1080p for high-definition, small-size results.
+- **External Displays**: Option to hide the Notch on external monitors.
+
+# Improvements
+- Fixed PDF page orientation issues.
+- Fixed Video compression size increase issues.
