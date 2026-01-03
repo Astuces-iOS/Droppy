@@ -13,6 +13,7 @@ struct NotchShelfView: View {
     @Bindable var state: DroppyState
     @ObservedObject var dragMonitor = DragMonitor.shared
     @AppStorage("useTransparentBackground") private var useTransparentBackground = false
+    @AppStorage("hideNotchOnExternalDisplays") private var hideNotchOnExternalDisplays = false
     
     
     /// Animation state for the border dash
@@ -37,10 +38,25 @@ struct NotchShelfView: View {
     private let notchWidth: CGFloat = 180
     private let notchHeight: CGFloat = 32
     private let expandedWidth: CGFloat = 450
-    // Dynamic height based on row count
     private var currentExpandedHeight: CGFloat {
         let rowCount = (Double(state.items.count) / 5.0).rounded(.up)
         return max(1, rowCount) * 110 + 40 // 110 per row + 40 header
+    }
+    
+    /// Helper to check if current screen is built-in (MacBook display)
+    private var isBuiltInDisplay: Bool {
+        guard let screen = NSScreen.main else { return true }
+        // On modern macOS, built-in displays usually have "Built-in" in their localized name
+        // This is the most reliable simple check without diving into IOKit
+        return screen.localizedName.contains("Built-in") || screen.localizedName.contains("Internal")
+    }
+    
+    private var shouldShowVisualNotch: Bool {
+        if state.isExpanded { return true }
+        if hideNotchOnExternalDisplays && !isBuiltInDisplay {
+            return false
+        }
+        return true
     }
     
     var body: some View {
@@ -53,6 +69,7 @@ struct NotchShelfView: View {
                     width: state.isExpanded ? expandedWidth : ((dragMonitor.isDragging || state.isMouseHovering) ? notchWidth + 20 : notchWidth),
                     height: state.isExpanded ? currentExpandedHeight : ((dragMonitor.isDragging || state.isMouseHovering) ? notchHeight + 40 : notchHeight)
                 )
+                .opacity(shouldShowVisualNotch ? 1.0 : 0.0)
                 .background {
                     if useTransparentBackground {
                         Color.clear
@@ -82,7 +99,7 @@ struct NotchShelfView: View {
                            )
                        )
                        .foregroundStyle(Color.blue)
-                       .opacity((!state.isExpanded && (dragMonitor.isDragging || state.isMouseHovering)) ? 1 : 0)
+                       .opacity((shouldShowVisualNotch && !state.isExpanded && (dragMonitor.isDragging || state.isMouseHovering)) ? 1 : 0)
                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dragMonitor.isDragging)
                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: state.isMouseHovering)
                 )

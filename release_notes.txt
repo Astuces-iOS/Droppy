@@ -1,4 +1,4 @@
-Fixed: Critical 'objc_release' crash in DragMonitor by refactoring pasteboard access.
-Performance: Optimized jiggle detection polling for better CPU efficiency.
-Automation: Fully automated GitHub Releases with binary consistency.
-🛡️ Stability and memory management hardened for production.
+New: Added "Hide Notch on External Displays" setting in Display preferences.
+Visual: The simulated notch is now hidden by default on external monitors when enabled.
+Stability: Improved NotchShelfView rendering logic and display detection.
+Binary consistency and automated updates fully active.

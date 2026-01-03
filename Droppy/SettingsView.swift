@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("useTransparentBackground") private var useTransparentBackground = false
     @AppStorage("enableNotchShelf") private var enableNotchShelf = true
     @AppStorage("enableFloatingBasket") private var enableFloatingBasket = true
+    @AppStorage("hideNotchOnExternalDisplays") private var hideNotchOnExternalDisplays = false
 
     
     // Background Hover Effect State
@@ -138,6 +139,15 @@ struct SettingsView: View {
                 VStack(alignment: .leading) {
                     Text("Transparent Background")
                     Text("Make the shelf and notch transparent")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            
+            Toggle(isOn: $hideNotchOnExternalDisplays) {
+                VStack(alignment: .leading) {
+                    Text("Hide Notch on External Displays")
+                    Text("Don't show the visual notch on non-built-in displays")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
