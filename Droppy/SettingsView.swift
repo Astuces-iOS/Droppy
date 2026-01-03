@@ -169,7 +169,7 @@ struct SettingsView: View {
                 Text("Medium (Balanced)").tag(1)
                 Text("High (Minimal Loss)").tag(2)
                 Divider()
-                Text("Ask for Target Size").tag(3)
+                Text("Ask for Target Size (Photos Only)").tag(3)
             } label: {
                 VStack(alignment: .leading) {
                     Text("Compression Quality")
@@ -182,7 +182,7 @@ struct SettingsView: View {
             Text("Compression")
         } footer: {
             if compressionMode == 3 {
-                Text("You'll be asked for a target file size each time you compress.")
+                Text("You'll be asked for a target file size when compressing photos. Other files will use Medium quality.")
             } else {
                 Text("Files like images, PDFs, and videos can be compressed from the right-click menu.")
             }
