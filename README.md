@@ -80,21 +80,20 @@ Droppy provides a **temporary shelf** for your files. Drag files to the top of y
   <img src="https://i.postimg.cc/63TpswW4/image.png" alt="Notch Shelf Preview" width="100%">
 </p>
 
+### The Floating Basket
+*Summoned anywhere with a quick jiggle. The perfect temporary holding zone.*
 <p align="center">
   <img src="https://i.postimg.cc/50488cNj/image.png" alt="Floating Basket Preview" width="100%">
 </p>
 
 ### The Clipboard Manager (BETA)
 *Your history, beautifully organized. Works in perfect harmony with the shelf and basket.*
-<p align="center">
-  <img src="https://i.postimg.cc/VNCvkGYk/image.png" alt="Direct Paste Preview" width="100%">
-</p>
 
-````carousel
+![Direct Paste](https://i.postimg.cc/VNCvkGYk/image.png)
+
 ![Multi-select & Drag](https://i.postimg.cc/mrJ9d1g6/image.png)
-<!-- slide -->
+
 ![Rename Entries](https://i.postimg.cc/SxKzkf24/image.png)
-````
 
 ---
 

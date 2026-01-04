@@ -105,16 +105,13 @@ final class NotchWindowController: NSObject, ObservableObject {
     private func startMonitors() {
         stopMonitors() // Idempotency
         
-        // Timer for periodic hit test updates (every 30ms)
-        // Capture window reference directly to avoid accessing self.notchWindow during potential deallocation
-        updateTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] timer in
+        // Timer for periodic hit test updates (every 50ms)
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
             guard let self = self, let window = self.notchWindow, window.isValid else {
                 timer.invalidate()
                 return
             }
-            autoreleasepool {
-                window.updateMouseEventHandling()
-            }
+            window.updateMouseEventHandling()
         }
         
         // Global monitor catches mouse movement when Droppy is not frontmost
@@ -273,10 +270,10 @@ class NotchWindow: NSWindow {
             // Use NSAnimationContext directly on the main thread without the animator() proxy.
             // The animator() proxy can spin up background threads (DisplayLink) that are
             // unstable during high-frequency checks or window lifecycle changes.
-            NSAnimationContext.runAnimationGroup({ context in
+            NSAnimationContext.runAnimationGroup({ [weak self] context in
                 context.duration = 0.5
                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                self.alphaValue = newTargetAlpha
+                self?.alphaValue = newTargetAlpha
             }, completionHandler: nil)
         }
     }

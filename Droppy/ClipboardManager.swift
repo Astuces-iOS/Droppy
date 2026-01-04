@@ -117,6 +117,12 @@ class ClipboardManager: ObservableObject {
         timer = nil
     }
     
+    func enforceHistoryLimit() {
+        if history.count > historyLimit {
+            history = Array(history.prefix(historyLimit))
+        }
+    }
+
     private func checkForChanges() {
         guard isEnabled else { return }
         let currentCount = NSPasteboard.general.changeCount
@@ -137,9 +143,7 @@ class ClipboardManager: ObservableObject {
             DispatchQueue.main.async {
                 self.history.insert(item, at: 0)
                 // Limit history based on user setting
-                if self.history.count > self.historyLimit {
-                    self.history = Array(self.history.prefix(self.historyLimit))
-                }
+                self.enforceHistoryLimit()
             }
         }
     }

@@ -16,6 +16,9 @@ struct SettingsView: View {
     @State private var hoverLocation: CGPoint = .zero
     @State private var isHovering: Bool = false
     
+    @State private var dashPhase: CGFloat = 0
+    @State private var isHistoryLimitEditing: Bool = false
+    
     var body: some View {
         ZStack {
             // Interactive background effect
@@ -58,6 +61,9 @@ struct SettingsView: View {
                 // Fix: Use compatible background modifier
                 .background(Color.clear)
             }
+        }
+        .onTapGesture {
+            isHistoryLimitEditing = false
         }
         .coordinateSpace(name: "settingsView")
         // Fix: Replace visionOS glassEffect with macOS material
@@ -281,14 +287,35 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Stepper(value: $clipboardHistoryLimit, in: 10...2000, step: 10) {
-                        Text("\(clipboardHistoryLimit)")
-                            .font(.system(.body, design: .monospaced))
+                    
+                    HStack(spacing: 0) {
+                        AutoSelectNumberField(value: $clipboardHistoryLimit, isEditing: $isHistoryLimitEditing)
+                            .frame(width: 50, height: 20) // Provide height for NSView
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.white.opacity(0.1))
-                            .cornerRadius(4)
+                            .background(Color.black.opacity(0.3))
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(
+                                        Color.accentColor.opacity(isHistoryLimitEditing ? 0.8 : 0),
+                                        style: StrokeStyle(
+                                            lineWidth: 1.5,
+                                            lineCap: .round,
+                                            dash: [3, 3],
+                                            dashPhase: dashPhase
+                                        )
+                                    )
+                            )
+                            .onAppear {
+                                withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
+                                    dashPhase = 6
+                                }
+                            }
                     }
+                }
+                .onChange(of: clipboardHistoryLimit) { _, _ in
+                    ClipboardManager.shared.enforceHistoryLimit()
                 }
             }
         } header: {
@@ -319,5 +346,121 @@ struct LaunchAtLoginManager {
         } catch {
             print("Failed to toggle launch at login: \(error)")
         }
+    }
+}
+
+// MARK: - Auto-Select Number Field
+struct AutoSelectNumberField: NSViewRepresentable {
+    @Binding var value: Int
+    @Binding var isEditing: Bool
+    
+    func makeNSView(context: Context) -> ClickSelectingTextField {
+        let textField = ClickSelectingTextField()
+        textField.delegate = context.coordinator
+        textField.isBordered = false
+        textField.drawsBackground = false
+        textField.backgroundColor = .clear
+        textField.textColor = .white
+        textField.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
+        textField.alignment = .center
+        textField.focusRingType = .none
+        textField.stringValue = String(value)
+        
+        // Route focus changes to the coordinator
+        textField.onFocusChange = { [weak coordinator = context.coordinator] isFocused in
+            coordinator?.didChangeFocus(isFocused)
+        }
+        
+        return textField
+    }
+    
+    func updateNSView(_ nsView: ClickSelectingTextField, context: Context) {
+        // Critical: Update parent reference so Coorindator has the latest Binding
+        context.coordinator.parent = self
+        
+        if !isEditing && nsView.stringValue != String(value) {
+            nsView.stringValue = String(value)
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: AutoSelectNumberField
+        
+        init(_ parent: AutoSelectNumberField) {
+            self.parent = parent
+        }
+        
+        func didChangeFocus(_ isFocused: Bool) {
+            // Update immediately to ensure UI is responsive
+            self.parent.isEditing = isFocused
+        }
+        
+        func controlTextDidBeginEditing(_ obj: Notification) {
+             didChangeFocus(true)
+        }
+        
+        func controlTextDidEndEditing(_ obj: Notification) {
+            // Use async here to allow value validation logic to complete
+            DispatchQueue.main.async {
+                self.parent.isEditing = false
+                if let textField = obj.object as? NSTextField {
+                    if let val = Int(textField.stringValue) {
+                        self.parent.value = val
+                    } else {
+                        textField.stringValue = String(self.parent.value)
+                    }
+                }
+            }
+        }
+        
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                if let textField = control as? NSTextField {
+                    textField.window?.makeFirstResponder(nil)
+                }
+                return true
+            }
+            return false
+        }
+    }
+}
+
+class ClickSelectingTextField: NSTextField {
+    // Callback to notify parent of focus changes immediately
+    var onFocusChange: ((Bool) -> Void)?
+    
+    override func becomeFirstResponder() -> Bool {
+        let success = super.becomeFirstResponder()
+        if success {
+            onFocusChange?(true)
+            // Use performSelector to avoid QoS priority inversion warning
+            self.perform(#selector(selectText(_:)), with: nil, afterDelay: 0.0)
+        }
+        return success
+    }
+    
+    override func resignFirstResponder() -> Bool {
+        let success = super.resignFirstResponder()
+        if success {
+            onFocusChange?(false)
+        }
+        return success
+    }
+    
+    override func mouseDown(with event: NSEvent) {
+        // Ensure standard click processing happens
+        super.mouseDown(with: event)
+        
+        // Then force selection
+        if let textEditor = self.currentEditor() {
+            textEditor.selectAll(nil)
+        }
+        
+        // And notify focus
+        onFocusChange?(true)
     }
 }

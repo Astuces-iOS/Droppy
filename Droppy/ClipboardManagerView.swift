@@ -10,9 +10,36 @@ struct ClipboardManagerView: View {
     @State private var renamingItemId: UUID?
     @State private var renamingText: String = ""
     
-    /// Helper to get selected items as array
+    @State private var isSearchHovering = false
+    @State private var dashPhase: CGFloat = 0
+    
+    // Search State
+    @State private var searchText = ""
+    @State private var isSearchVisible = false
+    @FocusState private var isSearchFocused: Bool
+    
+    /// Helper to get selected items as array, respecting visual order
     private var selectedItemsArray: [ClipboardItem] {
-        manager.history.filter { selectedItems.contains($0.id) }
+        sortedHistory.filter { selectedItems.contains($0.id) }
+    }
+    
+    /// History items sorted with favorites at the top and filtered by search
+    private var sortedHistory: [ClipboardItem] {
+        // First filter if search is active
+        let filtered: [ClipboardItem]
+        if searchText.isEmpty {
+            filtered = manager.history
+        } else {
+            filtered = manager.history.filter { item in
+                item.title.localizedCaseInsensitiveContains(searchText) || 
+                (item.content ?? "").localizedCaseInsensitiveContains(searchText) || 
+                (item.sourceApp ?? "").localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        
+        let favorites = filtered.filter { $0.isFavorite }
+        let others = filtered.filter { !$0.isFavorite }
+        return favorites + others
     }
     
     // Actions passed from Controller
@@ -68,7 +95,7 @@ struct ClipboardManagerView: View {
     }
     
     private func handleOnAppear() {
-        if selectedItems.isEmpty, let first = manager.history.first {
+        if selectedItems.isEmpty, let first = sortedHistory.first {
             selectedItems.insert(first.id)
         }
     }
@@ -76,7 +103,11 @@ struct ClipboardManagerView: View {
     private func handleHistoryChange(_ new: [ClipboardItem]) {
         // Remove any selected items that no longer exist
         selectedItems = selectedItems.filter { id in new.contains { $0.id == id } }
-        if selectedItems.isEmpty, let first = new.first {
+        
+        // Re-calculate sorted history based on the new data
+        let currentSorted = new.filter { $0.isFavorite } + new.filter { !$0.isFavorite }
+        
+        if selectedItems.isEmpty, let first = currentSorted.first {
             selectedItems.insert(first.id)
         }
     }
@@ -115,11 +146,11 @@ struct ClipboardManagerView: View {
     }
     
     private func navigateSelection(direction: Int) {
-        // Find current "anchor" item for navigation
+        // Find current "anchor" item for navigation using VISUAL sorted order
         guard let firstSelected = selectedItems.first,
-              let currentItem = manager.history.first(where: { $0.id == firstSelected }),
-              let index = manager.history.firstIndex(where: { $0.id == currentItem.id }) else {
-            if let first = manager.history.first {
+              let currentItem = sortedHistory.first(where: { $0.id == firstSelected }),
+              let index = sortedHistory.firstIndex(where: { $0.id == currentItem.id }) else {
+            if let first = sortedHistory.first {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     selectedItems = [first.id]
                 }
@@ -131,8 +162,8 @@ struct ClipboardManagerView: View {
         }
         
         let newIndex = index + direction
-        if newIndex >= 0 && newIndex < manager.history.count {
-            let newId = manager.history[newIndex].id
+        if newIndex >= 0 && newIndex < sortedHistory.count {
+            let newId = sortedHistory[newIndex].id
             // Silky smooth scrolling - instant selection, fluid scroll
             selectedItems = [newId]
             withAnimation(.timingCurve(0.25, 0.1, 0.25, 1.0, duration: 0.22)) {
@@ -167,13 +198,101 @@ struct ClipboardManagerView: View {
                 Text("Clipboard")
                     .font(.headline)
                     .foregroundStyle(.white)
+                
                 Spacer()
+                
+                // Search Toggle Button
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isSearchVisible.toggle()
+                        if !isSearchVisible {
+                            searchText = "" // Clear on close
+                            isSearchFocused = false
+                        } else {
+                            isSearchFocused = true
+                        }
+                    }
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(isSearchVisible ? .white : .secondary)
+                        .padding(6)
+                        .background(
+                            Circle()
+                                .fill(isSearchVisible ? Color.white.opacity(0.1) : Color.clear)
+                        )
+                        .overlay(
+                             Circle()
+                                .stroke(Color.white.opacity(0.1), lineWidth: isSearchHovering ? 1 : 0)
+                        )
+                        .scaleEffect(isSearchHovering ? 1.1 : 1.0)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("f", modifiers: .command) // Cmd+F support
+                .onHover { hovering in
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        isSearchHovering = hovering
+                    }
+                }
             }
             .padding(.horizontal)
             .padding(.top, 16)
             .padding(.bottom, 4)
-            .background(WindowDragArea())
+            .background(WindowDragArea()) // Keep drag area behind
             .contentShape(Rectangle())
+            
+            // Search Bar - Styled exactly like RenameTextField from FloatingBasketView
+            if isSearchVisible {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 14))
+                    
+                    TextField("Search history...", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13, weight: .medium))
+                        .focused($isSearchFocused)
+                    
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                                .font(.system(size: 14))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.black.opacity(0.3))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(
+                            Color.accentColor.opacity(0.8),
+                            style: StrokeStyle(
+                                lineWidth: 1.5,
+                                lineCap: .round,
+                                dash: [3, 3],
+                                dashPhase: dashPhase
+                            )
+                        )
+                )
+                .padding(.horizontal, 16)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .onAppear {
+                    // Reset animation state so it triggers every time the view appears
+                    dashPhase = 0
+                    // Animate the marching ants
+                    withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
+                        dashPhase = 6
+                    }
+                }
+            }
             
             if !manager.hasAccessibilityPermission {
                 accessibilityWarning
@@ -190,7 +309,7 @@ struct ClipboardManagerView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 8) {
-                            ForEach(manager.history) { item in
+                            ForEach(sortedHistory) { item in
                                 DraggableArea(
                                     items: {
                                         // If this item is selected, drag all selected
