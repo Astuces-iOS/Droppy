@@ -55,9 +55,22 @@ class LinkPreviewService {
     
     /// Check if URL points directly to an image
     func isDirectImageURL(_ urlString: String) -> Bool {
-        let imageExtensions = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "heic", "svg"]
-        guard let url = URL(string: urlString.lowercased()) else { return false }
-        return imageExtensions.contains(url.pathExtension)
+        let imageExtensions = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "heic", "svg", "avif", "apng"]
+        let lowercased = urlString.lowercased()
+        
+        // 1. Check extension
+        if let url = URL(string: lowercased) {
+            if imageExtensions.contains(url.pathExtension) {
+                return true
+            }
+        }
+        
+        // 2. Check common image paths/hosts (even without extension)
+        if lowercased.contains("i.postimg.cc") || lowercased.contains("i.imgur.com") {
+            return true
+        }
+        
+        return false
     }
     
     /// Fetch image directly from URL (for direct image links)

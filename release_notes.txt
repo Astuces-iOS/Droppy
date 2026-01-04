@@ -4,16 +4,17 @@
 - **Direct Save to Downloads**: Clicking the Save button now instantly saves the file to your Downloads folder, skipping the dialog for a faster workflow.
 - **Success Morph Animations**: The Copy and Save buttons now morph into a green checkmark briefly to provide clear, beautiful confirmation of success.
 
+### 🔗 Link Preview Enhancements
+- **Smarter URL Detection**: Droppy now recognizes links even when they are copied as plain text (e.g., from code editors or terminals).
+- **AVIF Support**: Added support for `.avif` and `.apng` image links.
+- **Better Image Host Support**: Improved detection for direct image links from sites like Postimg and Imgur.
+- Added a loading indicator for URL previews.
+
 ### 🩹 Stability & Performance
 - Fixed a lag when favoriting items by making disk operations asynchronous.
 - Resolved a critical graphics crash in the Hexagon animated background.
 - Fixed a race condition that could cause clipboard history to disappear during app launch.
 - Optimized memory usage for Link Previews with better caching.
-
-### 🔗 Link Preview Enhancements
-- Added a loading indicator for URL previews.
-- Improved support for direct image links (Postimg, Imgur, etc.).
-- Metadata cards now display more reliably with better error handling.
 
 ---
 

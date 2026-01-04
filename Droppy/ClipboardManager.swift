@@ -362,6 +362,15 @@ class ClipboardManager: ObservableObject {
             if let str = item.string(forType: .string) {
                 // Avoid empty strings
                 if !str.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // HEURISTIC: Check if this string looks like a URL
+                    // This is for apps that put a URL as plain text but don't mark it as .URL type
+                    let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let urlPattern = "^(https?://|www\\.)[a-zA-Z0-9\\-\\.]+\\.[a-zA-Z]{2,}(/\\S*)?$"
+                    if let _ = trimmed.range(of: urlPattern, options: [.regularExpression, .caseInsensitive]) {
+                        results.append(ClipboardItem(type: .url, content: trimmed, sourceApp: app, isConcealed: isConcealed))
+                        continue
+                    }
+                    
                     // Try to capture RTF data if available
                     let rtf = item.data(forType: .rtf) ?? item.data(forType: .rtfd)
                     results.append(ClipboardItem(type: .text, content: str, rtfData: rtf, sourceApp: app, isConcealed: isConcealed))
