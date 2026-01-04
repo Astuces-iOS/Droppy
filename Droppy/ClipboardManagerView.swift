@@ -429,7 +429,16 @@ struct ClipboardManagerView: View {
                                             Label("Paste", systemImage: "doc.on.clipboard")
                                         }
                                         Button {
+                                            let willBeFavorite = !item.isFavorite
                                             manager.toggleFavorite(item)
+                                            // Scroll to the item after it moves to favorites section
+                                            if willBeFavorite {
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                                        scrollProxy?.scrollTo(item.id, anchor: .top)
+                                                    }
+                                                }
+                                            }
                                         } label: {
                                             Label(item.isFavorite ? "Unfavorite" : "Favorite", systemImage: item.isFavorite ? "star.slash" : "star")
                                         }
@@ -650,6 +659,7 @@ struct ClipboardManagerView: View {
                       let item = manager.history.first(where: { $0.id == firstId }) {
                 ClipboardPreviewView(
                     item: item, 
+                    scrollProxy: scrollProxy,
                     onPaste: { onPaste(item) },
                     onDelete: { deleteSelectedItems() }
                 )
@@ -866,6 +876,7 @@ private struct ClipboardRenameTextField: NSViewRepresentable {
 
 struct ClipboardPreviewView: View {
     let item: ClipboardItem
+    var scrollProxy: ScrollViewProxy?
     let onPaste: () -> Void
     let onDelete: () -> Void
     
@@ -1129,7 +1140,16 @@ struct ClipboardPreviewView: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
                         starAnimationTrigger.toggle()
                     }
+                    let willBeFavorite = !item.isFavorite
                     manager.toggleFavorite(item)
+                    // Scroll to the item after it moves to favorites section
+                    if willBeFavorite {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                scrollProxy?.scrollTo(item.id, anchor: .top)
+                            }
+                        }
+                    }
                 } label: {
                     ZStack {
                         // Background glow when favorited
