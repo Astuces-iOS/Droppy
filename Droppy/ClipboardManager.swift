@@ -88,10 +88,47 @@ class ClipboardManager: ObservableObject {
     }
     @Published var hasAccessibilityPermission: Bool = false
     @Published var showPasteFeedback: Bool = false
-    @AppStorage("enableClipboardBeta") var isEnabled: Bool = false
-    @AppStorage("clipboardHistoryLimit") var historyLimit: Int = 50
-    @AppStorage("excludedClipboardApps") private var excludedAppsData: Data = Data()
-    @AppStorage("skipConcealedClipboard") var skipConcealedContent: Bool = false // User opt-in to skip passwords
+    
+    // MARK: - Settings (UserDefaults)
+    // Using direct UserDefaults access instead of @AppStorage to avoid crashes in Timer callbacks
+    
+    var isEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "enableClipboardBeta") }
+        set {
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue, forKey: "enableClipboardBeta")
+            if newValue {
+                startMonitoring()
+            } else {
+                stopMonitoring()
+            }
+        }
+    }
+    
+    var historyLimit: Int {
+        get {
+            let val = UserDefaults.standard.integer(forKey: "clipboardHistoryLimit")
+            return val == 0 ? 50 : val // Default to 50
+        }
+        set {
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue, forKey: "clipboardHistoryLimit")
+            enforceHistoryLimit()
+        }
+    }
+    
+    private var excludedAppsData: Data {
+        get { UserDefaults.standard.data(forKey: "excludedClipboardApps") ?? Data() }
+        set { UserDefaults.standard.set(newValue, forKey: "excludedClipboardApps") }
+    }
+    
+    var skipConcealedContent: Bool {
+        get { UserDefaults.standard.bool(forKey: "skipConcealedClipboard") }
+        set {
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue, forKey: "skipConcealedClipboard")
+        }
+    }
     
     /// Set of bundle identifiers to exclude from clipboard history
     var excludedApps: Set<String> {
@@ -103,6 +140,7 @@ class ClipboardManager: ObservableObject {
             return decoded
         }
         set {
+            objectWillChange.send()
             if let encoded = try? JSONEncoder().encode(newValue) {
                 excludedAppsData = encoded
             }
