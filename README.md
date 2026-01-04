@@ -153,7 +153,7 @@ Features:
 Fixes:
 - Fixed keyboard navigation being blocked in the clipboard UI.
 - Fixed clipboard window "popping" out of existence without animation.
-- Improved focus management to avoid stealing focus unnecessarily.
+- Improved focus management to prevent stealing focus when unnecessary.
 <!-- CHANGELOG_END -->
 
 ---
