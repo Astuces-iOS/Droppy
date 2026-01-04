@@ -1,4 +1,6 @@
 import SwiftUI
+import UniformTypeIdentifiers
+import LinkPresentation
 
 struct ClipboardManagerView: View {
     @ObservedObject var manager = ClipboardManager.shared
@@ -892,6 +894,8 @@ struct ClipboardPreviewView: View {
     @State private var isStarHovering = false
     @State private var isTrashHovering = false
     @State private var starAnimationTrigger = false
+    @State private var isDownloadHovering = false
+    @State private var isSavingFile = false
     
     // Animation Namespace
     @Namespace private var animationNamespace
@@ -910,6 +914,12 @@ struct ClipboardPreviewView: View {
     @State private var cachedAttributedText: AttributedString?
     @State private var isLoadingPreview = false
     
+    // Link Preview State
+    @State private var linkPreviewTitle: String?
+    @State private var linkPreviewImage: NSImage?
+    @State private var isLoadingLinkPreview = false
+    @State private var isDirectImageLink = false
+    
     private func copyToClipboard() {
         NSPasteboard.general.clearContents()
         if let str = item.content {
@@ -919,12 +929,96 @@ struct ClipboardPreviewView: View {
         }
     }
     
+    private func saveToFile() {
+        isSavingFile = true
+        
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        panel.showsTagField = false
+        
+        // Configure based on item type
+        switch item.type {
+        case .image:
+            let baseName = item.customTitle ?? "Image"
+            panel.nameFieldStringValue = "\(baseName).png"
+            panel.allowedContentTypes = [.png, .jpeg, .tiff]
+            
+        case .text:
+            let baseName = item.customTitle ?? "Text"
+            panel.nameFieldStringValue = "\(baseName).txt"
+            panel.allowedContentTypes = [.plainText]
+            
+        case .url:
+            let baseName = item.customTitle ?? "Link"
+            panel.nameFieldStringValue = "\(baseName).txt"
+            panel.allowedContentTypes = [.plainText]
+            
+        case .file:
+            if let path = item.content {
+                let url = URL(fileURLWithPath: path)
+                panel.nameFieldStringValue = url.lastPathComponent
+            }
+            
+        case .color:
+            panel.nameFieldStringValue = "Color.txt"
+            panel.allowedContentTypes = [.plainText]
+        }
+        
+        panel.begin { response in
+            defer { isSavingFile = false }
+            guard response == .OK, let url = panel.url else { return }
+            
+            do {
+                switch item.type {
+                case .image:
+                    if let data = item.imageData {
+                        // Determine format based on chosen extension
+                        if url.pathExtension.lowercased() == "jpg" || url.pathExtension.lowercased() == "jpeg" {
+                            if let nsImage = NSImage(data: data),
+                               let tiffData = nsImage.tiffRepresentation,
+                               let bitmap = NSBitmapImageRep(data: tiffData),
+                               let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.9]) {
+                                try jpegData.write(to: url)
+                            }
+                        } else {
+                            // Default to PNG
+                            if let nsImage = NSImage(data: data),
+                               let tiffData = nsImage.tiffRepresentation,
+                               let bitmap = NSBitmapImageRep(data: tiffData),
+                               let pngData = bitmap.representation(using: .png, properties: [:]) {
+                                try pngData.write(to: url)
+                            }
+                        }
+                    }
+                    
+                case .text, .url:
+                    if let content = item.content {
+                        try content.write(to: url, atomically: true, encoding: .utf8)
+                    }
+                    
+                case .file:
+                    if let path = item.content {
+                        let sourceURL = URL(fileURLWithPath: path)
+                        try FileManager.default.copyItem(at: sourceURL, to: url)
+                    }
+                    
+                case .color:
+                    if let content = item.content {
+                        try content.write(to: url, atomically: true, encoding: .utf8)
+                    }
+                }
+            } catch {
+                print("Save error: \(error.localizedDescription)")
+            }
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             // Content Preview
             VStack {
                 switch item.type {
-                case .text, .url:
+                case .text:
                     if isEditing {
                         TextEditor(text: $editedContent)
                             .font(.system(.body, design: .monospaced))
@@ -957,6 +1051,88 @@ struct ClipboardPreviewView: View {
                                     .textSelection(.enabled)
                             }
                         }
+                    }
+                    
+                case .url:
+                    if isEditing {
+                        TextEditor(text: $editedContent)
+                            .font(.system(.body, design: .monospaced))
+                            .scrollContentBackground(.hidden)
+                            .foregroundStyle(.white)
+                            .padding(12)
+                    } else {
+                        VStack(spacing: 16) {
+                            // Direct image link - show the image
+                            if isDirectImageLink, let previewImage = linkPreviewImage {
+                                Image(nsImage: previewImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(maxHeight: 200)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            // Website preview with metadata
+                            else if !isDirectImageLink {
+                                VStack(spacing: 12) {
+                                    // Preview image (if available)
+                                    if let previewImage = linkPreviewImage {
+                                        Image(nsImage: previewImage)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(maxHeight: 140)
+                                            .clipped()
+                                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    }
+                                    
+                                    // Title and domain
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if isLoadingLinkPreview {
+                                            HStack(spacing: 8) {
+                                                ProgressView()
+                                                    .controlSize(.small)
+                                                Text("Loading preview...")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        } else if let title = linkPreviewTitle {
+                                            Text(title)
+                                                .font(.headline)
+                                                .foregroundStyle(.white)
+                                                .lineLimit(2)
+                                        }
+                                        
+                                        if let urlString = item.content,
+                                           let domain = LinkPreviewService.shared.extractDomain(from: urlString) {
+                                            HStack(spacing: 6) {
+                                                Image(systemName: "link")
+                                                    .font(.caption2)
+                                                Text(domain)
+                                                    .font(.caption)
+                                            }
+                                            .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color.white.opacity(0.08))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                )
+                            }
+                            
+                            // Always show the full URL
+                            Text(liveItem.content ?? "")
+                                .font(.system(.callout, design: .monospaced))
+                                .foregroundStyle(.blue)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal)
+                        }
+                        .padding(.vertical)
                     }
                     
                 case .image:
@@ -1114,7 +1290,7 @@ struct ClipboardPreviewView: View {
                     Button(action: copyToClipboard) {
                         Text("Copy")
                             .fontWeight(.medium)
-                            .frame(width: 80)
+                            .frame(width: 70)
                             .padding(.vertical, 12)
                             .background(Color.white.opacity(isCopyHovering ? 0.2 : 0.1))
                             .foregroundStyle(.white)
@@ -1131,6 +1307,38 @@ struct ClipboardPreviewView: View {
                     .onHover { hovering in
                         withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                             isCopyHovering = hovering
+                        }
+                    }
+                    
+                    // Save to File Button
+                    Button(action: saveToFile) {
+                        ZStack {
+                            if isSavingFile {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "square.and.arrow.down")
+                                    .font(.system(size: 18, weight: .medium))
+                            }
+                        }
+                        .foregroundStyle(isDownloadHovering ? .white : .secondary)
+                        .frame(width: 44, height: 44)
+                        .background(isDownloadHovering ? Color.white.opacity(0.15) : Color.clear)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(isDownloadHovering ? Color.white.opacity(0.3) : Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                        .scaleEffect(isDownloadHovering ? 1.08 : 1.0)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Save to File")
+                    .disabled(isSavingFile)
+                    .onHover { hovering in
+                        withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                            isDownloadHovering = hovering
                         }
                     }
                 }
@@ -1291,6 +1499,9 @@ struct ClipboardPreviewView: View {
             // Clear previous cache immediately to avoid flicker or wrong previews
             cachedImage = nil
             cachedAttributedText = nil
+            linkPreviewTitle = nil
+            linkPreviewImage = nil
+            isDirectImageLink = false
             
             switch item.type {
             case .image:
@@ -1299,12 +1510,42 @@ struct ClipboardPreviewView: View {
                         NSImage(data: data)
                     }.value
                 }
-            case .text, .url:
+                
+            case .text:
                 if let rtfData = item.rtfData {
                     cachedAttributedText = await Task.detached(priority: .userInitiated) {
                         try? rtfToAttributedString(rtfData)
                     }.value
                 }
+                
+            case .url:
+                // Fetch link preview
+                if let urlString = item.content {
+                    isLoadingLinkPreview = true
+                    
+                    // Check if it's a direct image link
+                    if LinkPreviewService.shared.isDirectImageURL(urlString) {
+                        isDirectImageLink = true
+                        linkPreviewImage = await LinkPreviewService.shared.fetchImagePreview(for: urlString)
+                    } else {
+                        // Fetch website metadata
+                        if let metadata = await LinkPreviewService.shared.fetchMetadata(for: urlString) {
+                            linkPreviewTitle = metadata.title
+                            
+                            // Try to get image from metadata
+                            if let imageProvider = metadata.imageProvider {
+                                linkPreviewImage = await withCheckedContinuation { continuation in
+                                    imageProvider.loadObject(ofClass: NSImage.self) { image, error in
+                                        continuation.resume(returning: image as? NSImage)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    isLoadingLinkPreview = false
+                }
+                
             default: break
             }
             
