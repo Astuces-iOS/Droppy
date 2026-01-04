@@ -935,7 +935,7 @@ struct ClipboardPreviewView: View {
         let panel = NSSavePanel()
         panel.canCreateDirectories = true
         panel.showsTagField = false
-        panel.level = .floating // Ensure it appears above the clipboard window
+        panel.level = .modalPanel // Higher than popUpMenu to appear above clipboard
         
         // Configure based on item type
         switch item.type {
@@ -965,52 +965,52 @@ struct ClipboardPreviewView: View {
             panel.allowedContentTypes = [.plainText]
         }
         
-        panel.begin { response in
-            defer { isSavingFile = false }
-            guard response == .OK, let url = panel.url else { return }
-            
-            do {
-                switch item.type {
-                case .image:
-                    if let data = item.imageData {
-                        // Determine format based on chosen extension
-                        if url.pathExtension.lowercased() == "jpg" || url.pathExtension.lowercased() == "jpeg" {
-                            if let nsImage = NSImage(data: data),
-                               let tiffData = nsImage.tiffRepresentation,
-                               let bitmap = NSBitmapImageRep(data: tiffData),
-                               let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.9]) {
-                                try jpegData.write(to: url)
-                            }
-                        } else {
-                            // Default to PNG
-                            if let nsImage = NSImage(data: data),
-                               let tiffData = nsImage.tiffRepresentation,
-                               let bitmap = NSBitmapImageRep(data: tiffData),
-                               let pngData = bitmap.representation(using: .png, properties: [:]) {
-                                try pngData.write(to: url)
-                            }
+        // Run modally to ensure it appears on top
+        let response = panel.runModal()
+        defer { isSavingFile = false }
+        guard response == .OK, let url = panel.url else { return }
+        
+        do {
+            switch item.type {
+            case .image:
+                if let data = item.imageData {
+                    // Determine format based on chosen extension
+                    if url.pathExtension.lowercased() == "jpg" || url.pathExtension.lowercased() == "jpeg" {
+                        if let nsImage = NSImage(data: data),
+                           let tiffData = nsImage.tiffRepresentation,
+                           let bitmap = NSBitmapImageRep(data: tiffData),
+                           let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.9]) {
+                            try jpegData.write(to: url)
+                        }
+                    } else {
+                        // Default to PNG
+                        if let nsImage = NSImage(data: data),
+                           let tiffData = nsImage.tiffRepresentation,
+                           let bitmap = NSBitmapImageRep(data: tiffData),
+                           let pngData = bitmap.representation(using: .png, properties: [:]) {
+                            try pngData.write(to: url)
                         }
                     }
-                    
-                case .text, .url:
-                    if let content = item.content {
-                        try content.write(to: url, atomically: true, encoding: .utf8)
-                    }
-                    
-                case .file:
-                    if let path = item.content {
-                        let sourceURL = URL(fileURLWithPath: path)
-                        try FileManager.default.copyItem(at: sourceURL, to: url)
-                    }
-                    
-                case .color:
-                    if let content = item.content {
-                        try content.write(to: url, atomically: true, encoding: .utf8)
-                    }
                 }
-            } catch {
-                print("Save error: \(error.localizedDescription)")
+                
+            case .text, .url:
+                if let content = item.content {
+                    try content.write(to: url, atomically: true, encoding: .utf8)
+                }
+                
+            case .file:
+                if let path = item.content {
+                    let sourceURL = URL(fileURLWithPath: path)
+                    try FileManager.default.copyItem(at: sourceURL, to: url)
+                }
+                
+            case .color:
+                if let content = item.content {
+                    try content.write(to: url, atomically: true, encoding: .utf8)
+                }
             }
+        } catch {
+            print("Save error: \(error.localizedDescription)")
         }
     }
     
