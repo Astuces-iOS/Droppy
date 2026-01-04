@@ -140,12 +140,15 @@ brew install --cask iordv/tap/droppy
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-Release v3.0.2
+Release v3.0.3
+
+New Features:
+- Smooth scroll-to-top animation when favoriting items - the view now follows the item as it moves to the favorites section
 
 Bug Fixes:
 - Fixed critical objc_release crash in NotchWindowController timer callbacks
 - Fixed objc_release crash in DragMonitor checkForActiveDrag method
-- Aligned bottom padding (20pt) between entries list and action buttons for visual consistency
+- Aligned bottom padding between entries list and action buttons for visual consistency
 <!-- CHANGELOG_END -->
 
 ---
