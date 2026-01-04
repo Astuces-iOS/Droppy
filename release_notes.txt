@@ -1,4 +1,4 @@
-# Droppy v2.7.3: The Liquid Update 🌊
+# Droppy v2.7.4: The Liquid Update 🌊
 
 This release introduces a completely redesigned, custom-built Update Screen that matches the premium "Liquid Glass" aesthetic of Droppy.
 
