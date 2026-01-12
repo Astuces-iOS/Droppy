@@ -1,3 +1,6 @@
+Droppy is a very good app made by Jordy Spruit 🙂 Here is the original README : 
+
+
 
 <p align="center">
   <img src="docs/assets/app-icon.png" alt="Droppy Icon" width="128">
